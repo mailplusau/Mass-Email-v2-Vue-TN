@@ -1,13 +1,18 @@
 <template>
     <div id="app" class="container-fluid px-4">
+        <MassEmailSender />
 
+        <GlobalNoticeModal />
     </div>
 </template>
 
 <script>
+import GlobalNoticeModal from "@/components/GlobalNoticeModal";
+import MassEmailSender from "@/views/mass-email/Main";
 
 export default {
     name: 'App',
+    components: {GlobalNoticeModal, MassEmailSender},
     beforeCreate() {
         this.$store.dispatch('init');
     },
