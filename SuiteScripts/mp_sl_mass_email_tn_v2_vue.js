@@ -3,7 +3,7 @@
  * @description NetSuite Experimentation - Mass Email Sender with Vue 2
  * @NApiVersion 2.1
  * @NScriptType Suitelet
- * @created 13/04/2023
+ * @created 21/06/2023
  */
 
 // This should be the same file as the one built by webpack. Make sure this matches the filename in package.json
@@ -226,11 +226,13 @@ const getOperations = {
     'getAllEmailTemplates' : function (response) {
         let {search} = NS_MODULES;
         let data = [];
-        let columnNames = ['internalid', 'name', 'subject'];
+        let columnNames = ['internalid', 'name', 'custrecord_camp_comm_subject', 'custrecord_camp_comm_email_template'];
 
         search.create({
-            type: search.Type['EMAIL_TEMPLATE'],
-            filters: [],
+            type: 'customrecord_camp_comm_template',
+            filters: [
+                {name: 'isinactive', operator: 'is', values: false}
+            ],
             columns: columnNames.map(item => ({name: item}))
         }).run().each(result => {
             let tmp = {};

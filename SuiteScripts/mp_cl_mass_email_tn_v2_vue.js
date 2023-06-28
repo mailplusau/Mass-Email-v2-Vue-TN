@@ -3,7 +3,7 @@
  * @description NetSuite Experimentation - Mass Email Sender with Vue 2. The only purpose of this script is to expose NetSuite modules to the Vue app.
  * @NApiVersion 2.1
  * @NScriptType ClientScript
- * @created 13/04/2023
+ * @created 21/06/2023
  */
 
 let modules = {};
