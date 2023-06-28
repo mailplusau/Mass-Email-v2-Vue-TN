@@ -334,35 +334,34 @@ const sharedFunctions = {
     getEmailAddressesFromSavedSearch(savedSearchId) {
         let {search} = NS_MODULES;
         let data = [];
-        let fieldsToGet = [];
         let fieldsToCheck = ['email', 'custentity_email_service', 'custentity_email_sales'];
-        let fieldsAreChecked = false;
         let chunk = 0;
+        let chunkSize = 1000;
         let resultSubset = [];
 
-        let resultSet = search.load({id: savedSearchId}).run();
+        let emailAddressSearch = search.load({id: savedSearchId});
+
+        let searchColumns = emailAddressSearch.columns.map(item => item.name);
+
+        let fieldsToGet = _getArrayIntersection(fieldsToCheck, searchColumns);
+
+        // Check if there's any intersection between searchColumns and fieldsToCheck. If there is none then this saved
+        // search does not contain what we're looking for
+        if (!fieldsToGet.length)
+            return data;
+
+        let resultSet = emailAddressSearch.run();
 
         do {
-            resultSubset = resultSet.getRange({start: chunk * 1000, end: chunk * 1000 + 1000});
+            resultSubset = resultSet.getRange({start: chunk * chunkSize, end: chunk * chunkSize + chunkSize});
 
             for (let result of resultSubset) {
-                if (!fieldsAreChecked) {
-                    for (let column of result.columns)
-                        if (fieldsToCheck.includes(column.name)) fieldsToGet.push(column.name);
-
-                    fieldsAreChecked = true;
-                }
-
-                if (!fieldsToGet.length) break;
-
                 for (let field of fieldsToGet)
                     if (result.getValue(field)) data.push(result.getValue(field));
-
-                chunk++;
             }
 
-            if (!fieldsToGet.length) break;
-        } while(resultSubset.length >= 1000 && fieldsToGet.length)
+            chunk++;
+        } while (resultSubset.length >= chunkSize)
 
         return [...new Set(data)]; // we use 'new Set()' to eliminate duplicates
     }
@@ -386,4 +385,9 @@ function _getLocalTimeFromOffset(localUTCOffset) {
     localTime.setTime(today.getTime() + (serverUTCOffset - parseInt(localUTCOffset)) * 60 * 1000);
 
     return localTime;
+}
+
+function _getArrayIntersection(a, b) {
+    let setB = new Set(b);
+    return [...new Set(a)].filter(x => setB.has(x));
 }
