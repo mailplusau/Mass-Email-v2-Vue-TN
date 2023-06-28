@@ -256,7 +256,7 @@ const getOperations = {
         search.create({
             type: search.Type['SAVED_SEARCH'],
             filters: [
-                // {name: 'recordtype', operator: 'is', values: 'Customer'},
+                {name: 'recordtype', operator: 'anyof', values: ['Customer', 'Contact']},
             ],
             columns: columnNames.map(item => ({name: item}))
         }).run().each(result => {
