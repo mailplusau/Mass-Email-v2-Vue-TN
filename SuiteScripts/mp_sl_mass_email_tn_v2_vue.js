@@ -272,6 +272,49 @@ const getOperations = {
 
         _writeResponseJson(response, data);
     },
+    'getSavedSearchesByType' : function (response, {savedSearchType}) {
+        let {search} = NS_MODULES;
+        let data = [];
+        let columnNames = ['id', 'title', 'recordtype', 'frombundle', 'owner', 'access', 'lastrunby', 'lastrunon'];
+
+        if (['Customer', 'Contact'].includes(savedSearchType))
+            search.create({
+                type: search.Type['SAVED_SEARCH'],
+                filters: [
+                    {name: 'recordtype', operator: 'anyof', values: [savedSearchType]},
+                ],
+                columns: columnNames.map(item => ({name: item}))
+            }).run().each(result => {
+                data.push({
+                    value: result.getValue('id'),
+                    text: result.getValue('title')
+                });
+
+                return true;
+            });
+        else if (['Franchisee'].includes(savedSearchType))
+            search.create({
+                type: "partner",
+                filters:
+                    [
+                        ["isinactive","is","F"],
+                        "AND",
+                        ["entityid","doesnotstartwith","Old"],
+                        "AND",
+                        ["custrecord_fr_agreement_franchisee.custrecord_fr_agreement_status","noneof","6"]
+                    ],
+                columns: ['internalid', 'companyname', 'department', 'location']
+            }).run().each(result => {
+                data.push({
+                    value: result.getValue('internalid'),
+                    text: result.getValue('companyname')
+                });
+
+                return true;
+            });
+
+        _writeResponseJson(response, data);
+    },
     'getEmailAddressesFromSavedSearch' : function (response, {savedSearchId}) {
         _writeResponseJson(response, sharedFunctions.getEmailAddressesFromSavedSearch(savedSearchId));
     },
