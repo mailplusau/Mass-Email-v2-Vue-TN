@@ -1,13 +1,13 @@
 <template>
     <div style="display: inline-block;">
-        <b-button class="mx-3" variant="success" @click="modal = true" :disabled="loading">Send Mass Email</b-button>
+        <b-button class="mx-3" variant="success" @click="modal = true" :disabled="loading || form.busy">Send Mass Email</b-button>
 
         <b-modal centered v-model="modal" @hide="handleModalHide">
             <template v-slot:modal-header>
                 <h6 class="text-center">Sending Mass Email</h6>
             </template>
 
-            <b-row class="justify-content-center" v-if="loading">
+            <b-row class="justify-content-center" v-if="loading || form.busy">
                 <b-col cols="12" class="text-center">
                     <b-spinner variant="primary"></b-spinner>
                 </b-col>
@@ -23,7 +23,7 @@
 
             <template v-slot:modal-footer>
                 <b-button size="sm" variant="danger" @click="modal = false" :disabled="loading">No, cancel</b-button>
-                <b-button size="sm" variant="success" @click="proceed" :disabled="loading">Yes, let's send them!</b-button>
+                <b-button size="sm" variant="success" @click="proceed" :disabled="loading || form.busy">Yes, let's send them!</b-button>
             </template>
         </b-modal>
     </div>
@@ -43,6 +43,11 @@ export default {
         },
         handleModalHide(event) {
             if(this.loading) event.preventDefault();
+        },
+    },
+    computed: {
+        form() {
+            return this.$store.getters['form']
         },
     }
 }
