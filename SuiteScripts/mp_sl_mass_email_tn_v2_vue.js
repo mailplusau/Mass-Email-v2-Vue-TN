@@ -324,36 +324,61 @@ const getOperations = {
 }
 
 const postOperations = {
-    'sendTestEmail' : function (response, {emailTemplateId}) {
+    'sendTestEmail' : function (response, {emailTemplateId, customSubject = ''}) {
         let {runtime, email} = NS_MODULES;
         let {emailSubject, emailBody} = sharedFunctions.getEmailTemplate(emailTemplateId);
 
         email.sendBulk({
             author: 112209,
             recipients: [runtime.getCurrentUser().email],
-            subject: emailSubject,
+            subject: customSubject || emailSubject,
             body: emailBody,
             isInternalOnly: true
         });
 
         _writeResponseJson(response, {recipient: runtime.getCurrentUser().email});
     },
-    'sendMassEmails' : function (response, {savedSearchId, emailTemplateId}) {
-        let {email} = NS_MODULES;
-        let emailAddresses = sharedFunctions.getEmailAddressesFromSavedSearch(savedSearchId);
-        let {emailSubject, emailBody} = sharedFunctions.getEmailTemplate(emailTemplateId);
+    'sendMassEmails' : function (response, {savedSearchId, emailTemplateId, customSubject = '', savedSearchType}) {
+        let {file, task, search} = NS_MODULES;
 
-        if (emailAddresses.length) {
-            email.sendBulk({
-                author: 112209, // sending as system@sent-via.netsuite.com
-                body: emailBody,
-                subject: emailSubject,
-                recipients: emailAddresses,
-                isInternalOnly: false
-            });
+        // We check if this saved search has any field that can contain email address
+        if (['Customer', 'Contact'].includes(savedSearchType)) {
+            let fieldsToCheck = ['email', 'custentity_email_service', 'custentity_email_sales'];
+            let emailAddressSearch = search.load({id: savedSearchId});
+            let searchColumns = emailAddressSearch.columns.map(item => item.name);
+            let fieldsToGet = _getArrayIntersection(fieldsToCheck, searchColumns);
 
-            _writeResponseJson(response, 'Emails have been sent to all addresses present in the specified saved search.');
-        } else _writeResponseJson(response, 'No email was sent. Saved search contain no email address.');
+            if (!fieldsToGet.length) {
+                _writeResponseJson(response, 'No email was sent. Saved search contain no email address.');
+                return
+            }
+        }
+
+        let fileContent = {timestamp: Date.now(), emails: [], customSubject, emailTemplateId, authorId: 112209};
+
+        // noinspection JSVoidFunctionReturnValueUsed
+        let fileId = file.create({
+            name: `mp_sc_mass_email_params.json`,
+            fileType: file.Type['JSON'],
+            contents: JSON.stringify(fileContent),
+            folder: -15,
+        }).save();
+
+        let scriptTask = task.create({
+            taskType: task.TaskType['MAP_REDUCE'],
+            scriptId: 'customscript_mr_mass_email_tn_v2',
+            deploymentId: 'customdeploy_mr_mass_email_tn_v2',
+            params: {
+                custscript_mr_mes_search_id: savedSearchId,
+                custscript_mr_mes_exec_timestamp: fileContent.timestamp,
+                custscript_mr_mes_param_file_id: fileId,
+                custscript_mr_mes_entity_type: savedSearchType
+            }
+        });
+        let scriptTaskId = scriptTask.submit();
+        let status = task.checkStatus(scriptTaskId).status;
+
+        _writeResponseJson(response, `Emails will be sent to all addresses present in the specified saved search. (${status})`);
     },
 };
 
