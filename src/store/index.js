@@ -14,6 +14,9 @@ const state = {
     form: {
         emailTemplateId: null,
         savedSearchId: null,
+        customSubject: '',
+        searchType: '',
+        busy: false,
 
         emailAddresses: [],
     },
@@ -42,6 +45,11 @@ const state = {
         isError: false
     },
 
+    searchTypes: [
+        {value: 'Customer', text: 'Customer'},
+        {value: 'Contact', text: 'Contact'},
+        {value: 'Franchisee', text: 'Franchisee'},
+    ]
 };
 
 const getters = {
@@ -51,6 +59,7 @@ const getters = {
     form: state => state.form,
     previewTemplateModal: state => state.previewTemplateModal,
     previewEmailAddressModal: state => state.previewEmailAddressModal,
+    searchTypes: state => state.searchTypes,
 };
 
 const mutations = {
@@ -87,15 +96,22 @@ const actions = {
     init: async context => {
         try {
             context.state.emailTemplates = await http.get('getAllEmailTemplates');
-            context.state.savedSearches = await http.get('getAllSavedSearches');
-
-            console.log(context.state);
         } catch (e) { console.error(e); }
     },
     handleException: (context, {title, message}) => {
         context.commit('displayErrorGlobalModal', {
             title, message
         })
+    },
+    handleSearchTypeChanged: async context => {
+        context.state.form.busy = true;
+
+        context.state.form.savedSearchId = '';
+        context.state.savedSearches = await http.get('getSavedSearchesByType', {
+            savedSearchType: context.state.form.searchType
+        });
+
+        context.state.form.busy = false;
     },
     previewEmailAddresses: async context => {
         if (!context.state.form.savedSearchId) {
