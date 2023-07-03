@@ -141,7 +141,6 @@ const actions = {
         }
 
         context.state.previewTemplateModal.loading = true;
-        if (context.state.form.emailTemplateId) context.state.previewTemplateModal.open = true;
 
         try {
             if (context.state.previewTemplateModal.selectedId !== context.state.form.emailTemplateId) {
@@ -152,6 +151,7 @@ const actions = {
                 context.state.previewTemplateModal.emailBody = emailBody;
                 context.state.previewTemplateModal.emailSubject = emailSubject;
                 context.state.previewTemplateModal.selectedId = context.state.form.emailTemplateId;
+                context.state.form.customSubject = emailSubject;
             }
         } catch (e) { console.error(e); }
 
@@ -189,6 +189,8 @@ const actions = {
             let message = await http.post('sendMassEmails', {
                 emailTemplateId: context.state.form.emailTemplateId,
                 savedSearchId: context.state.form.savedSearchId,
+                customSubject: context.state.form.customSubject,
+                savedSearchType: context.state.form.searchType
             });
 
             context.commit('displayInfoGlobalModal', {title: 'Done', message})
