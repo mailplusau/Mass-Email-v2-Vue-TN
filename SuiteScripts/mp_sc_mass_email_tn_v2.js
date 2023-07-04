@@ -25,9 +25,8 @@ define(moduleNames.map(item => 'N/' + item), (...args) => {
         let paramTimestamp = runtime.getCurrentScript().getParameter("custscript_execution_timestamp");
         let fileRecord = file.load({id: fileId});
         let {timestamp, emails, customSubject, emailTemplateId, authorId} = JSON.parse(fileRecord.getContents());
-        let [emailAddress, customerId] = emails?.length ? emails.pop().split('/') : [];
 
-        if (!timestamp || !email?.length || !emailTemplateId || !authorId) {
+        if (!timestamp || !emails || !emailTemplateId || !authorId) {
             log.debug({
                 title: "execute()",
                 details: `Parameters missing from file. Timestamp: ${timestamp}. Emails: ${emails?.length}. Email Template ID: ${emailTemplateId}. Author ID: ${authorId}. Custom Subject: ${customSubject}.`,
@@ -43,13 +42,15 @@ define(moduleNames.map(item => 'N/' + item), (...args) => {
             return;
         }
 
+        if (!emails?.length) {
+            log.debug({title: "execute()", details: `Execution finished.`});
+            // TODO: clean up the file (maybe?)
+            return;
+        }
 
-        log.debug({
-            title: "execute()",
-            details: `Sending email to: ${emailAddress}. Remaining length: ${emails?.length}`,
-        });
 
-        let {emailSubject, emailBody} = _getEmailTemplate(emailTemplateId);
+        let [emailAddress, customerId] = emails?.length ? emails.pop().split('/') : [];
+        let {emailSubject, emailBody} = _getEmailTemplate(emailTemplateId, customerId);
         email.send({
             author: authorId,
             subject: customSubject || emailSubject,
@@ -59,42 +60,39 @@ define(moduleNames.map(item => 'N/' + item), (...args) => {
                 entityId: customerId
             }
         })
+        log.debug({
+            title: "execute()",
+            details: `Email sent to: ${emailAddress}. Remaining length: ${emails?.length}`,
+        });
 
-        if (emails?.length) {
-            file.create({
-                name: fileRecord.name,
-                fileType: fileRecord.fileType,
-                contents: JSON.stringify({timestamp, emails, customSubject, emailTemplateId, authorId}),
-                folder: fileRecord.folder,
-            }).save();
+        file.create({
+            name: fileRecord.name,
+            fileType: fileRecord.fileType,
+            contents: JSON.stringify({timestamp, emails, customSubject, emailTemplateId, authorId}),
+            folder: fileRecord.folder,
+        }).save();
 
-            let scriptTask = task.create({
-                taskType: task.TaskType['SCHEDULED_SCRIPT'],
-                scriptId: 'customscript_sc_mass_email_tn_v2',
-                deploymentId: 'customdeploy_sc_mass_email_tn_v2',
-                params: {
-                    custscript_execution_timestamp: timestamp,
-                    custscript_parameter_file_id: fileId,
-                }
-            });
+        let scriptTask = task.create({
+            taskType: task.TaskType['SCHEDULED_SCRIPT'],
+            scriptId: 'customscript_sc_mass_email_tn_v2',
+            deploymentId: 'customdeploy_sc_mass_email_tn_v2',
+            params: {
+                custscript_execution_timestamp: timestamp,
+                custscript_parameter_file_id: fileId,
+            }
+        });
 
-            scriptTask.submit();
-        } else
-            log.debug({
-                title: "execute()",
-                details: `Finished execution`,
-            });
+        scriptTask.submit();
     }
 
-    function _getEmailTemplate(emailTemplateId) {
+    function _getEmailTemplate(emailTemplateId, customerId) {
         let {render} = NS_MODULES;
         let mergeResult = render.mergeEmail({
             templateId: emailTemplateId,
-            entity: null,
-            recipient: null,
-            supportCaseId: null,
-            transactionId: null,
-            customRecord: null
+            entity: {
+                type: 'customer',
+                id: parseInt(customerId)
+            },
         });
         let emailSubject = mergeResult.subject;
         let emailBody = mergeResult.body;
