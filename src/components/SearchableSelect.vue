@@ -10,6 +10,8 @@
                 :placeholder="placeholder"
                 required
                 readonly
+                autocomplete="off"
+                data-lpignore="true"
                 style="border: none !important;"
             />
         </template>
