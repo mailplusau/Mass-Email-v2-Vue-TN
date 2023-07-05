@@ -16,6 +16,7 @@ const state = {
         savedSearchId: null,
         customSubject: '',
         searchType: '',
+        emailCount: '',
         busy: false,
 
         emailAddresses: [],
@@ -107,11 +108,23 @@ const actions = {
         context.state.form.busy = true;
 
         context.state.form.savedSearchId = '';
+        context.state.form.emailCount = '';
         context.state.savedSearches = await http.get('getSavedSearchesByType', {
             savedSearchType: context.state.form.searchType
         });
 
         context.state.form.busy = false;
+    },
+    handleSavedSearchIdChanged: async context => {
+        context.state.form.busy = true;
+
+        context.state.form.emailCount = await http.get('getEmailCountFromSavedSearch', {
+            savedSearchType: context.state.form.searchType,
+            savedSearchId: context.state.form.savedSearchId
+        });
+
+        context.state.form.busy = false;
+
     },
     previewEmailAddresses: async context => {
         if (!context.state.form.savedSearchId) {
