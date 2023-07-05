@@ -315,6 +315,27 @@ const getOperations = {
 
         _writeResponseJson(response, data);
     },
+    'getEmailCountFromSavedSearch' : function (response, {savedSearchType, savedSearchId}) {
+        let {search} = NS_MODULES;
+
+        if (['Customer', 'Contact'].includes(savedSearchType)) {
+            let fieldsToGet = sharedFunctions.checkIfSavedSearchHasEmailFields(savedSearchId)
+
+            if (fieldsToGet.length) _writeResponseJson(response, 'This saved search contains email addresses.');
+            else _writeResponseJson(response, 'This saved search does not contain any email address.');
+        } else if (savedSearchType === 'Franchisee') {
+            let count = 0;
+            search.create({
+                type: 'customer',
+                filters: [['partner', 'is', savedSearchId], 'and', ['isinactive', 'is', false]],
+                columns: ['internalid', 'email', 'custentity_email_service']
+            }).run().each(() => {
+                count++;
+                return true;
+            })
+            _writeResponseJson(response, `There are ${count} customers under this franchisee.`);
+        }
+    },
     'getEmailAddressesFromSavedSearch' : function (response, {savedSearchId}) {
         _writeResponseJson(response, sharedFunctions.getEmailAddressesFromSavedSearch(savedSearchId));
     },
@@ -339,14 +360,11 @@ const postOperations = {
         _writeResponseJson(response, {recipient: runtime.getCurrentUser().email});
     },
     'sendMassEmails' : function (response, {savedSearchId, emailTemplateId, customSubject = '', savedSearchType}) {
-        let {file, task, search} = NS_MODULES;
+        let {file, task} = NS_MODULES;
 
         // We check if this saved search has any field that can contain email address
         if (['Customer', 'Contact'].includes(savedSearchType)) {
-            let fieldsToCheck = ['email', 'custentity_email_service', 'custentity_email_sales'];
-            let emailAddressSearch = search.load({id: savedSearchId});
-            let searchColumns = emailAddressSearch.columns.map(item => item.name);
-            let fieldsToGet = _getArrayIntersection(fieldsToCheck, searchColumns);
+            let fieldsToGet = sharedFunctions.checkIfSavedSearchHasEmailFields(savedSearchId)
 
             if (!fieldsToGet.length) {
                 _writeResponseJson(response, 'No email was sent. Saved search contain no email address.');
@@ -378,7 +396,7 @@ const postOperations = {
         let scriptTaskId = scriptTask.submit();
         let status = task.checkStatus(scriptTaskId).status;
 
-        _writeResponseJson(response, `Emails will be sent to all addresses present in the specified saved search. (${status})`);
+        _writeResponseJson(response, `Emails will be sent to all addresses present in the specified saved search. (Task status: ${status})`);
     },
 };
 
@@ -432,6 +450,14 @@ const sharedFunctions = {
         } while (resultSubset.length >= chunkSize)
 
         return [...new Set(data)]; // we use 'new Set()' to eliminate duplicates
+    },
+    checkIfSavedSearchHasEmailFields(savedSearchId) {
+        let {search} = NS_MODULES;
+        let fieldsToCheck = ['email', 'custentity_email_service', 'custentity_email_sales'];
+        let emailAddressSearch = search.load({id: savedSearchId});
+        let searchColumns = emailAddressSearch.columns.map(item => item.name);
+
+        return _getArrayIntersection(fieldsToCheck, searchColumns);
     }
 };
 
