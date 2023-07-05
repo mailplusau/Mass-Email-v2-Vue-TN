@@ -43,7 +43,11 @@ define(moduleNames.map(item => 'N/' + item), (...args) => {
         else if (entityType === 'Franchisee') {
             return search.create({
                 type: 'customer',
-                filters: ['partner', 'is', runtime.getCurrentScript().getParameter("custscript_mr_mes_search_id")],
+                filters: [
+                    ['partner', 'is', runtime.getCurrentScript().getParameter("custscript_mr_mes_search_id")],
+                    'AND',
+                    ['isinactive', 'is', false]
+                ],
                 columns: ['internalid', 'email', 'custentity_email_service']
             })
         } else return [];
