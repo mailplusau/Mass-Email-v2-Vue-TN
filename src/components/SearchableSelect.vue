@@ -28,7 +28,7 @@
             <i>There's nothing here. Here's a koala instead ʕ·͡ᴥ·ʔ</i>
         </b-dropdown-item>
 
-        <b-dropdown-item v-for="(option, index) in filteredOptions" :key="option.value" :active="index === selectedIndex" @click="onClickingDropDownItem(index)">
+        <b-dropdown-item v-for="(option, index) in filteredOptions" :key="option.value + '_' + index" :active="index === selectedIndex" @click="onClickingDropDownItem(index)">
             {{ option.text }}
         </b-dropdown-item>
     </b-dropdown>
