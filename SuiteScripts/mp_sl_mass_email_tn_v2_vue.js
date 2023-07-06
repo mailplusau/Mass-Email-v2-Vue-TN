@@ -372,6 +372,13 @@ const postOperations = {
             }
         }
 
+        // We check if the process is already running
+        if (_isSendingInProgress()) {
+            _writeResponseJson(response, {error: 'Another process is already running. Please try again later.'});
+            return
+        }
+
+
         let fileContent = {timestamp: Date.now(), emails: [], customSubject, emailTemplateId, authorId: 112209};
 
         // noinspection JSVoidFunctionReturnValueUsed
@@ -460,6 +467,24 @@ const sharedFunctions = {
         return _getArrayIntersection(fieldsToCheck, searchColumns);
     }
 };
+
+function _isSendingInProgress() {
+    let {search, file} = NS_MODULES;
+    let fileId = null;
+
+    search.create({
+        type: 'file',
+        filters: ['name', 'is', 'mp_sc_mass_email_params.json'],
+        columns: ['name', 'url']
+    }).run().each(resultSet => {fileId = resultSet.id;});
+
+    if (!fileId) return false;
+
+    let fileRecord = file.load({id: fileId});
+    let fileContentToCheck = JSON.parse(fileRecord.getContents());
+
+    return !!fileContentToCheck.emails?.length;
+}
 
 function _parseIsoDatetime(dateString) {
     let dt = dateString.split(/[: T-]/).map(parseFloat);
