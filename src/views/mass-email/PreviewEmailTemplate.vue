@@ -19,7 +19,7 @@ export default {
     methods: {
         onIframeLoaded() {
             console.log(this.$refs);
-            this.$refs.previewIframe.height = this.$refs.previewIframe.contentDocument.body.scrollHeight + 'px';
+            this.$refs.previewIframe.height = this.$refs.previewIframe.contentDocument.body.scrollHeight + 10 + 'px';
         }
     },
     computed: {

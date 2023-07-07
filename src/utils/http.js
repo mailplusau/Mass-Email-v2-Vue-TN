@@ -32,7 +32,7 @@ export default {
 }
 
 function _handle(err, res, reject, resolve) {
-    let errorMessage = err || (res.body.error || null);
+    let errorMessage = err || (res.body?.error || null);
 
     if (errorMessage) {
         store.dispatch('handleException', {title: 'An error occurred', message: errorMessage}, {root: true}).then();
