@@ -379,7 +379,7 @@ const postOperations = {
         }
 
 
-        let fileContent = {timestamp: Date.now(), emails: [], customSubject, emailTemplateId, authorId: 112209};
+        let fileContent = {status: 'INDEXING', timestamp: Date.now(), emails: [], customSubject, emailTemplateId, authorId: 112209};
 
         // noinspection JSVoidFunctionReturnValueUsed
         let fileId = file.create({
@@ -481,9 +481,12 @@ function _isSendingInProgress() {
     if (!fileId) return false;
 
     let fileRecord = file.load({id: fileId});
-    let fileContentToCheck = JSON.parse(fileRecord.getContents());
 
-    return !!fileContentToCheck.emails?.length;
+    try {
+        let fileContent = JSON.parse(fileRecord.getContents());
+
+        return ['INDEXING', 'SENDING'].includes(fileContent.status);
+    } catch (e) { return false; }
 }
 
 function _parseIsoDatetime(dateString) {

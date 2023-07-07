@@ -42,47 +42,54 @@ define(moduleNames.map(item => 'N/' + item), (...args) => {
             return;
         }
 
-        if (!emails?.length) {
-            log.debug({title: "execute()", details: `Execution finished.`});
+        if (emails?.length) {
             // TODO: clean up the file (maybe?)
-            return;
+            let [emailAddress, customerId] = emails?.length ? emails.pop().split('/') : [];
+            let {emailSubject, emailBody} = _getEmailTemplate(emailTemplateId, customerId);
+            email.send({
+                author: authorId,
+                subject: customSubject || emailSubject,
+                body: emailBody,
+                recipients: emailAddress,
+                relatedRecords: {
+                    entityId: customerId
+                }
+            })
+            log.debug({
+                title: "execute()",
+                details: `Email sent to: ${emailAddress}. Remaining length: ${emails?.length}`,
+            });
+
+            file.create({
+                name: fileRecord.name,
+                fileType: fileRecord.fileType,
+                contents: JSON.stringify({status: 'SENDING',timestamp, emails, customSubject, emailTemplateId, authorId}),
+                folder: fileRecord.folder,
+            }).save();
+
+            let scriptTask = task.create({
+                taskType: task.TaskType['SCHEDULED_SCRIPT'],
+                scriptId: 'customscript_sc_mass_email_tn_v2',
+                deploymentId: 'customdeploy_sc_mass_email_tn_v2',
+                params: {
+                    custscript_execution_timestamp: timestamp,
+                    custscript_parameter_file_id: fileId,
+                }
+            });
+
+            scriptTask.submit();
+        } else {
+            file.create({
+                name: fileRecord.name,
+                fileType: fileRecord.fileType,
+                contents: JSON.stringify({status: 'COMPLETED',timestamp, emails, customSubject, emailTemplateId, authorId}),
+                folder: fileRecord.folder,
+            }).save();
+
+            log.debug({title: "execute()", details: `Execution finished.`});
         }
 
 
-        let [emailAddress, customerId] = emails?.length ? emails.pop().split('/') : [];
-        let {emailSubject, emailBody} = _getEmailTemplate(emailTemplateId, customerId);
-        email.send({
-            author: authorId,
-            subject: customSubject || emailSubject,
-            body: emailBody,
-            recipients: emailAddress,
-            relatedRecords: {
-                entityId: customerId
-            }
-        })
-        log.debug({
-            title: "execute()",
-            details: `Email sent to: ${emailAddress}. Remaining length: ${emails?.length}`,
-        });
-
-        file.create({
-            name: fileRecord.name,
-            fileType: fileRecord.fileType,
-            contents: JSON.stringify({timestamp, emails, customSubject, emailTemplateId, authorId}),
-            folder: fileRecord.folder,
-        }).save();
-
-        let scriptTask = task.create({
-            taskType: task.TaskType['SCHEDULED_SCRIPT'],
-            scriptId: 'customscript_sc_mass_email_tn_v2',
-            deploymentId: 'customdeploy_sc_mass_email_tn_v2',
-            params: {
-                custscript_execution_timestamp: timestamp,
-                custscript_parameter_file_id: fileId,
-            }
-        });
-
-        scriptTask.submit();
     }
 
     function _getEmailTemplate(emailTemplateId, customerId) {
