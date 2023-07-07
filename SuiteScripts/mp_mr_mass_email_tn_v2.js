@@ -62,7 +62,7 @@ define(moduleNames.map(item => 'N/' + item), (...args) => {
         let searchResult = JSON.parse(context.values);
 
         for (let field of fieldsToCheck) {
-            let id = searchResult.values?.internalid?.value || searchResult.values['internalid'];
+            let id = searchResult.values?.['customer.internalid'] || searchResult.values?.internalid?.value || searchResult.values['internalid'];
             if (searchResult.values[field])
                 context.write({
                     key: context.key + '|' + index,
