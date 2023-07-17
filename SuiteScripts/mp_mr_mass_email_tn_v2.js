@@ -95,6 +95,7 @@ define(moduleNames.map(item => 'N/' + item), (...args) => {
 
         if (tempSet.size) {
             fileContent.emails = [...tempSet];
+            fileContent.totalEmailCount = tempSet.size;
 
             file.create({
                 name: fileRecord.name,

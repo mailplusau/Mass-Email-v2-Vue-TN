@@ -341,6 +341,33 @@ const getOperations = {
     },
     'getEmailTemplate' : function (response, {emailTemplateId}) {
         _writeResponseJson(response, sharedFunctions.getEmailTemplate(emailTemplateId));
+    },
+    'getProgressStatus' : function (response) {
+        let {search, file} = NS_MODULES;
+        let progressStatus = {status: null, emailAddressCount: 0, remainingCount: 0};
+        let fileId = null;
+
+        search.create({
+            type: 'file',
+            filters: ['name', 'is', 'mp_sc_mass_email_params.json'],
+            columns: ['name', 'url']
+        }).run().each(resultSet => {fileId = resultSet.id;});
+
+        if (fileId) {
+            let fileRecord = file.load({id: fileId});
+
+            try {
+                let fileContent = JSON.parse(fileRecord.getContents());
+
+                progressStatus.status = fileContent.status;
+                progressStatus.emailAddressCount = fileContent.totalEmailCount;
+                progressStatus.remainingCount = fileContent.emails.length;
+            } catch (e) {
+                //
+            }
+        }
+
+        _writeResponseJson(response, progressStatus);
     }
 }
 
@@ -379,7 +406,7 @@ const postOperations = {
         }
 
 
-        let fileContent = {status: 'INDEXING', timestamp: Date.now(), emails: [], customSubject, emailTemplateId, authorId: 112209};
+        let fileContent = {status: 'INDEXING', timestamp: Date.now(), emails: [], totalEmailCount: 0, customSubject, emailTemplateId, authorId: 112209};
 
         // noinspection JSVoidFunctionReturnValueUsed
         let fileId = file.create({

@@ -17,7 +17,7 @@
         </b-row>
 
         <template v-slot:modal-footer>
-            <b-button size="sm" @click="forceClose" :disabled="globalModal.busy">Okay</b-button>
+            <b-button size="sm" @click="forceClose" :disabled="globalModal.busy">{{ globalModal.busy ? 'Please wait' : 'Okay' }}</b-button>
         </template>
     </b-modal>
 

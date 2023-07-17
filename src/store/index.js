@@ -7,6 +7,8 @@ const baseURL = 'https://' + process.env.VUE_APP_NS_REALM + '.app.netsuite.com';
 
 Vue.use(Vuex)
 
+let progressTimer;
+
 const state = {
     emailTemplates: [],
     savedSearches: [],
@@ -50,7 +52,9 @@ const state = {
         {value: 'Customer', text: 'Customer'},
         {value: 'Contact', text: 'Contact'},
         {value: 'Franchisee', text: 'Franchisee'},
-    ]
+    ],
+
+    progressStatus: {status: null, emailAddressCount: 0, remainingCount: 0}
 };
 
 const getters = {
@@ -75,12 +79,12 @@ const mutations = {
         state.globalModal.persistent = true;
         state.globalModal.isError = true;
     },
-    displayBusyGlobalModal: (state, {title, message, open}) => {
+    displayBusyGlobalModal: (state, {title, message, open = true}) => {
         state.globalModal.title = title;
         state.globalModal.body = message;
         state.globalModal.busy = open;
         state.globalModal.open = open;
-        state.globalModal.persistent = false;
+        state.globalModal.persistent = true;
         state.globalModal.isError = false;
     },
     displayInfoGlobalModal: (state, {title, message}) => {
@@ -96,6 +100,9 @@ const mutations = {
 const actions = {
     init: async context => {
         try {
+            await context.dispatch('checkProgress');
+            progressTimer = setInterval(() => {context.dispatch('checkProgress')}, 5000);
+
             context.state.emailTemplates = await http.get('getAllEmailTemplates');
         } catch (e) { console.error(e); }
     },
@@ -197,7 +204,7 @@ const actions = {
         }
 
         try {
-            context.commit('displayBusyGlobalModal', {title: 'Processing', message: 'Sending the selected email template to yourself...', open: true})
+            context.commit('displayBusyGlobalModal', {title: 'Processing', message: 'Sending out emails according to selected saved search and email template...', open: true})
 
             let message = await http.post('sendMassEmails', {
                 emailTemplateId: context.state.form.emailTemplateId,
@@ -208,6 +215,32 @@ const actions = {
 
             context.commit('displayInfoGlobalModal', {title: 'Done', message})
         } catch (e) { console.error(e); }
+    },
+    checkProgress : async context => {
+        let {status, emailAddressCount, remainingCount} = await http.get('getProgressStatus');
+
+        let currentProgress = context.state.progressStatus;
+
+        let progressText = '(' + (parseInt(emailAddressCount) - parseInt(remainingCount)) + '/' + emailAddressCount + ')';
+
+        if (currentProgress.status !== status && status) {
+            if (status === 'INDEXING')
+                context.commit('displayBusyGlobalModal', {title: 'Email sending in progress', message: 'Email addresses in the saved search are being indexed...', open: true});
+            else if (status === 'SENDING')
+                context.commit('displayBusyGlobalModal', {title: 'Email sending in progress', message: 'Emails are being sent out... ' + progressText, open: true});
+            else if (currentProgress.status !== null && status === 'COMPLETED')
+                context.commit('displayInfoGlobalModal', {title: 'Complete', message: emailAddressCount + ' emails were sent out.'});
+        }
+
+        if (status === 'SENDING')
+            context.state.globalModal.body = 'Emails are being sent out... ' + progressText
+
+        context.state.progressStatus.status = status;
+        context.state.progressStatus.emailAddressCount = emailAddressCount;
+        context.state.progressStatus.remainingCount = remainingCount;
+    },
+    stopCheckingProgress : () => {
+        clearInterval(progressTimer);
     }
 };
 

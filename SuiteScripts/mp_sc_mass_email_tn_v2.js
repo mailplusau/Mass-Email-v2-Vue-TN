@@ -24,7 +24,7 @@ define(moduleNames.map(item => 'N/' + item), (...args) => {
         let fileId = runtime.getCurrentScript().getParameter("custscript_parameter_file_id");
         let paramTimestamp = runtime.getCurrentScript().getParameter("custscript_execution_timestamp");
         let fileRecord = file.load({id: fileId});
-        let {timestamp, emails, customSubject, emailTemplateId, authorId} = JSON.parse(fileRecord.getContents());
+        let {timestamp, emails, totalEmailCount, customSubject, emailTemplateId, authorId} = JSON.parse(fileRecord.getContents());
 
         if (!timestamp || !emails || !emailTemplateId || !authorId) {
             log.debug({
@@ -63,7 +63,7 @@ define(moduleNames.map(item => 'N/' + item), (...args) => {
             file.create({
                 name: fileRecord.name,
                 fileType: fileRecord.fileType,
-                contents: JSON.stringify({status: 'SENDING',timestamp, emails, customSubject, emailTemplateId, authorId}),
+                contents: JSON.stringify({status: 'SENDING', timestamp, emails, totalEmailCount, customSubject, emailTemplateId, authorId}),
                 folder: fileRecord.folder,
             }).save();
 
