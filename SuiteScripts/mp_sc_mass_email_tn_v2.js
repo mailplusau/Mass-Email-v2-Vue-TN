@@ -82,7 +82,7 @@ define(moduleNames.map(item => 'N/' + item), (...args) => {
             file.create({
                 name: fileRecord.name,
                 fileType: fileRecord.fileType,
-                contents: JSON.stringify({status: 'COMPLETED',timestamp, emails, customSubject, emailTemplateId, authorId}),
+                contents: JSON.stringify({status: 'COMPLETED', timestamp, emails, totalEmailCount, customSubject, emailTemplateId, authorId}),
                 folder: fileRecord.folder,
             }).save();
 
