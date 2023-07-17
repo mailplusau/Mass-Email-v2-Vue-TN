@@ -17,13 +17,13 @@
             </b-row>
             <b-row class="justify-content-center" v-else>
                 <b-col cols="12" class="text-center">
-                    An email of the specified will be sent out to all email addresses found in the saved search. Proceed?
+                    An email of the specified template will be sent out to all email addresses found in the selected saved search. Proceed?
                 </b-col>
             </b-row>
 
             <template v-slot:modal-footer>
                 <b-button size="sm" variant="danger" @click="modal = false" :disabled="loading">No, cancel</b-button>
-                <b-button size="sm" variant="success" @click="proceed" :disabled="loading || form.busy">Yes, let's send them!</b-button>
+                <b-button size="sm" variant="success" @click="proceed" :disabled="loading || form.busy">Yes, send them!</b-button>
             </template>
         </b-modal>
     </div>

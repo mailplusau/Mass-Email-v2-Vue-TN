@@ -14,6 +14,8 @@
             <b-col cols="12" class="text-center">
                 <span v-html="globalModal.body"></span>
             </b-col>
+
+            <div class="d-none">{{$store.getters['globalModal']}}</div>
         </b-row>
 
         <template v-slot:modal-footer>

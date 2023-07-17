@@ -54,7 +54,7 @@ const state = {
         {value: 'Franchisee', text: 'Franchisee'},
     ],
 
-    progressStatus: {status: null, emailAddressCount: 0, remainingCount: 0}
+    progressStatus: {status: null, emailAddressCount: 0, remainingCount: 0, refreshCount: 0, averageProgressRate: 0}
 };
 
 const getters = {
@@ -218,31 +218,57 @@ const actions = {
     },
     checkProgress : async context => {
         let {status, emailAddressCount, remainingCount} = await http.get('getProgressStatus');
-
         let currentProgress = context.state.progressStatus;
+        let progressText = _getProgressText(context, emailAddressCount, remainingCount);
 
-        let progressText = '(' + (parseInt(emailAddressCount) - parseInt(remainingCount)) + '/' + emailAddressCount + ')';
-
-        if (currentProgress.status !== status && status) {
-            if (status === 'INDEXING')
-                context.commit('displayBusyGlobalModal', {title: 'Email sending in progress', message: 'Email addresses in the saved search are being indexed...', open: true});
-            else if (status === 'SENDING')
-                context.commit('displayBusyGlobalModal', {title: 'Email sending in progress', message: 'Emails are being sent out... ' + progressText, open: true});
-            else if (currentProgress.status !== null && status === 'COMPLETED')
-                context.commit('displayInfoGlobalModal', {title: 'Complete', message: emailAddressCount + ' emails were sent out.'});
-        }
-
-        if (status === 'SENDING')
-            context.state.globalModal.body = 'Emails are being sent out... ' + progressText
+        if (status === 'INDEXING')
+            context.commit('displayBusyGlobalModal', {title: 'Email sending in progress', message: 'Email addresses in the saved search are being indexed...', open: true});
+        else if (status === 'SENDING')
+            context.commit('displayBusyGlobalModal', {title: 'Email sending in progress', message: 'Emails are being sent out... ' + progressText, open: true});
+        else if (currentProgress.status !== null && currentProgress.status !== status && status === 'COMPLETED')
+            context.commit('displayInfoGlobalModal', {title: 'Complete', message: emailAddressCount + ' emails were sent out.'});
 
         context.state.progressStatus.status = status;
-        context.state.progressStatus.emailAddressCount = emailAddressCount;
-        context.state.progressStatus.remainingCount = remainingCount;
+        context.state.progressStatus.emailAddressCount = parseInt(emailAddressCount);
+        context.state.progressStatus.remainingCount = parseInt(remainingCount);
     },
     stopCheckingProgress : () => {
         clearInterval(progressTimer);
     }
 };
+
+function _getProgressText(context, emailAddressCount, remainingCount) {
+    let etaText = '';
+
+    context.state.progressStatus.refreshCount++;
+
+    let progressPerRefresh = context.state.progressStatus.remainingCount - parseInt(remainingCount);
+    let progressPerSecond = progressPerRefresh / 5;
+
+    if (progressPerRefresh > 0)
+        context.state.progressStatus.averageProgressRate = (progressPerSecond + context.state.progressStatus.averageProgressRate) / 2;
+
+    if (context.state.progressStatus.averageProgressRate) {
+        let remainingTimeInSeconds = Math.round(parseInt(remainingCount) / context.state.progressStatus.averageProgressRate);
+
+        let remainTimeText = _convertSecondsToHHMMSS(remainingTimeInSeconds);
+
+        etaText += '. ETA: ' + remainTimeText;
+    }
+    return '(' + (parseInt(emailAddressCount) - parseInt(remainingCount)) + '/' + emailAddressCount + ' emails sent' + etaText + ')';
+}
+
+function _convertSecondsToHHMMSS(seconds, readable = false) {
+    let remainder = seconds % 86400;
+    let days = Math.floor(seconds / 86400);
+
+    let timeString = new Date(remainder * 1000).toISOString().slice(11, 19);
+    let [hh, mm, ss] = timeString.split(':')
+
+    return readable ?
+        (parseInt(hh) + days * 24) + ' hours ' + mm + ' minutes ' + ss + ' seconds' :
+        (parseInt(hh) + days * 24) + ':' + mm + ':' + ss;
+}
 
 const store = new Vuex.Store({
     state,
