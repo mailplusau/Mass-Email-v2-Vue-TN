@@ -46,7 +46,9 @@ define(moduleNames.map(item => 'N/' + item), (...args) => {
                 filters: [
                     ['partner', 'is', runtime.getCurrentScript().getParameter("custscript_mr_mes_search_id")],
                     'AND',
-                    ['isinactive', 'is', false]
+                    ['isinactive', 'is', false],
+                    'AND',
+                    ['entitystatus', 'is', 13] // Only signed customer receive the emails
                 ],
                 columns: ['internalid', 'email', 'custentity_email_service']
             })

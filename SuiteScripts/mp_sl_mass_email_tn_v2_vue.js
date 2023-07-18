@@ -327,13 +327,13 @@ const getOperations = {
             let count = 0;
             search.create({
                 type: 'customer',
-                filters: [['partner', 'is', savedSearchId], 'and', ['isinactive', 'is', false]],
+                filters: [['partner', 'is', savedSearchId], 'and', ['isinactive', 'is', false], 'and', ['entitystatus', 'is', 13]],
                 columns: ['internalid', 'email', 'custentity_email_service']
             }).run().each(() => {
                 count++;
                 return true;
             })
-            _writeResponseJson(response, `There are ${count} customers under this franchisee.`);
+            _writeResponseJson(response, `There are ${count} signed customers under this franchisee.`);
         }
     },
     'getEmailAddressesFromSavedSearch' : function (response, {savedSearchId}) {
