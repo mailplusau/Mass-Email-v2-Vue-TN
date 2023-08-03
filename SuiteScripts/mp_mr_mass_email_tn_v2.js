@@ -60,19 +60,19 @@ define(moduleNames.map(item => 'N/' + item), (...args) => {
 
     function reduce(context) {
         let index = 0;
-        let fieldsToCheck = ['email', 'custentity_email_service', 'custentity_email_sales'];
         let searchResult = JSON.parse(context.values);
+        let emailRegEx = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+        let id = searchResult.values?.['customer.internalid'] ||
+            searchResult.values?.internalid?.value || searchResult.values['internalid'] || null;
 
-        for (let field of fieldsToCheck) {
-            let id = searchResult.values?.['customer.internalid'] || searchResult.values?.internalid?.value || searchResult.values['internalid'];
-            if (searchResult.values[field])
-                context.write({
-                    key: context.key + '|' + index,
-                    value: searchResult.values[field] + '/' + id
-                });
+        if(!id) NS_MODULES.log.error({title: "Undefined ID", details: `${context.values}`});
+        else
+            for (let field in searchResult.values) { // check for any field that contains 'email' in its name and its value is a valid email adress
+                if (field.includes('email') && typeof searchResult.values[field] === 'string' && emailRegEx.test(searchResult.values[field]))
+                    context.write({key: context.key + '|' + index, value: searchResult.values[field] + '/' + id});
 
-            index++;
-        }
+                index++;
+            }
     }
 
     function summarize(context) {
