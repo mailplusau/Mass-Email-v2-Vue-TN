@@ -96,10 +96,9 @@ define(moduleNames.map(item => 'N/' + item), (...args) => {
         let {render} = NS_MODULES;
         let mergeResult = render.mergeEmail({
             templateId: emailTemplateId,
-            entity: customerId ? {
-                type: 'customer',
-                id: parseInt(customerId)
-            } : null,
+            entity: /^[0-9]+$/.test(customerId) ?
+                {type: 'customer', id: parseInt(customerId)} :
+                null,
         });
         let emailSubject = mergeResult.subject;
         let emailBody = mergeResult.body;
