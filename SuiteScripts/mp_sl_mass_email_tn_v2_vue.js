@@ -6,6 +6,8 @@
  * @created 21/06/2023
  */
 
+import {VARS} from '@/utils/utils.mjs';
+
 // This should be the same file as the one built by webpack. Make sure this matches the filename in package.json
 let htmlTemplateFile = 'mp_cl_mass_email_tn_v2_vue.html';
 const clientScriptFilename = 'mp_cl_mass_email_tn_v2_vue.js';
@@ -87,8 +89,6 @@ define(['N/ui/serverWidget', 'N/render', 'N/search', 'N/file', 'N/log', 'N/recor
         if (request.method === "GET") {
 
             if (!_handleGETRequests(request.parameters['requestData'], response)){
-                // Render the page using either inline form or standalone page
-                // _getStandalonePage(response)
                 _getInlineForm(response)
             }
 
@@ -107,25 +107,12 @@ define(['N/ui/serverWidget', 'N/render', 'N/search', 'N/file', 'N/log', 'N/recor
     return {onRequest};
 });
 
-// Render the page within a form element of NetSuite. This can cause conflict with NetSuite's stylesheets.
+// We use the form to load the Client Script.
 function _getInlineForm(response) {
-    let {serverWidget, render, file} = NS_MODULES;
-    
+    let {serverWidget} = NS_MODULES;
+
     // Create a NetSuite form
     let form = serverWidget.createForm({ title: defaultTitle });
-
-    // Then create form field in which we will render our html template
-    let htmlField = form.addField({
-        id: "custpage_html",
-        label: "html",
-        type: serverWidget.FieldType.INLINEHTML,
-    });
-    
-    const pageRenderer = render.create();
-    const htmlFileData = _getHtmlTemplate(htmlTemplateFile);
-    const htmlFile = file.load({ id: htmlFileData[htmlTemplateFile].id });
-    pageRenderer.templateContent = htmlFile.getContents();
-    htmlField.defaultValue = pageRenderer.renderAsString();
 
     // Retrieve client script ID using its file name.
     form.clientScriptFileId = _getHtmlTemplate(clientScriptFilename)[clientScriptFilename].id;
@@ -189,9 +176,9 @@ function _handleGETRequests(request, response) {
 
         if (!operation) throw 'No operation specified.';
 
-        if (!getOperations[operation]) throw `Operation [${operation}] is not supported.`;
-
-        getOperations[operation](response, requestParams);
+        if (operation === 'getIframeContents') _getIframeContents(response);
+        else if (!getOperations[operation]) throw `GET operation [${operation}] is not supported.`;
+        else getOperations[operation](response, requestParams);
     } catch (e) {
         log.debug({title: "_handleGETRequests", details: `error: ${e}`});
         _writeResponseJson(response, {error: `${e}`})
@@ -206,8 +193,8 @@ function _handlePOSTRequests({operation, requestParams}, response) {
     try {
         if (!operation) throw 'No operation specified.';
 
-        // _writeResponseJson(response, {source: '_handlePOSTRequests', operation, requestParams});
-        postOperations[operation](response, requestParams);
+        if (!postOperations[operation]) throw `POST operation [${operation}] is not supported.`;
+        else postOperations[operation](response, requestParams);
     } catch (e) {
         log.debug({title: "_handlePOSTRequests", details: `error: ${e}`});
         _writeResponseJson(response, {error: `${e}`})
@@ -220,6 +207,14 @@ function _writeResponseJson(response, body) {
         name: 'Content-Type',
         value: 'application/json; charset=utf-8'
     });
+}
+
+function _getIframeContents(response) {
+    let {file} = NS_MODULES;
+    const htmlFileData = _getHtmlTemplate(htmlTemplateFile);
+    const htmlFile = file.load({ id: htmlFileData[htmlTemplateFile].id });
+
+    _writeResponseJson(response, htmlFile.getContents());
 }
 
 const getOperations = {
@@ -342,96 +337,33 @@ const getOperations = {
     'getEmailTemplate' : function (response, {emailTemplateId}) {
         _writeResponseJson(response, sharedFunctions.getEmailTemplate(emailTemplateId));
     },
-    'getProgressStatus' : function (response) {
-        let {search, file} = NS_MODULES;
-        let progressStatus = {status: null, emailAddressCount: 0, remainingCount: 0};
-        let fileId = null;
+    'getParametersForScheduler' : function (response, {savedSearchId, emailTemplateId, customSubject, savedSearchType} = {}) {
+        let taskParameters = {savedSearchId, savedSearchType,  emailAddressIndexed: 0, totalEmailSent: 0,
+            customSubject, emailTemplateId, authorId: 112209};
 
-        search.create({
-            type: 'file',
-            filters: ['name', 'is', 'mp_sc_mass_email_params.json'],
-            columns: ['name', 'url']
-        }).run().each(resultSet => {fileId = resultSet.id;});
-
-        if (fileId) {
-            let fileRecord = file.load({id: fileId});
-
-            try {
-                let fileContent = JSON.parse(fileRecord.getContents());
-
-                progressStatus.status = fileContent.status;
-                progressStatus.emailAddressCount = fileContent.totalEmailCount;
-                progressStatus.remainingCount = fileContent.emails.length;
-            } catch (e) {
-                //
-            }
-        }
-
-        _writeResponseJson(response, progressStatus);
-    }
-}
-
-const postOperations = {
-    'sendTestEmail' : function (response, {emailTemplateId, customSubject = ''}) {
-        let {runtime, email} = NS_MODULES;
-        let {emailSubject, emailBody} = sharedFunctions.getEmailTemplate(emailTemplateId);
-
-        email.sendBulk({
-            author: 112209,
-            recipients: [runtime.getCurrentUser().email],
-            subject: customSubject || emailSubject,
-            body: emailBody,
-            isInternalOnly: true
-        });
-
-        _writeResponseJson(response, {recipient: runtime.getCurrentUser().email});
-    },
-    'sendMassEmails' : function (response, {savedSearchId, emailTemplateId, customSubject = '', savedSearchType}) {
-        let {file, task} = NS_MODULES;
+        // Check if saved search is present and has data
+        if (!savedSearchId) return _writeResponseJson(response, {error: 'No saved search specified.'});
 
         // We check if this saved search has any field that can contain email address
         if (['Customer', 'Contact'].includes(savedSearchType)) {
             let fieldsToGet = sharedFunctions.checkIfSavedSearchHasEmailFields(savedSearchId)
 
-            if (!fieldsToGet.length) {
-                _writeResponseJson(response, 'No email was sent. Saved search contain no email address.');
-                return
-            }
+            if (!fieldsToGet.length)
+                return _writeResponseJson(response, 'No email was sent. Saved search contain no email address.');
         }
 
-        // We check if the process is already running
-        if (_isSendingInProgress()) {
-            _writeResponseJson(response, {error: 'Another process is already running. Please try again later.'});
-            return
-        }
-
-
-        let fileContent = {status: 'INDEXING', timestamp: Date.now(), emails: [], totalEmailCount: 0, customSubject, emailTemplateId, authorId: 112209};
-
-        // noinspection JSVoidFunctionReturnValueUsed
-        let fileId = file.create({
-            name: `mp_sc_mass_email_params.json`,
-            fileType: file.Type['JSON'],
-            contents: JSON.stringify(fileContent),
-            folder: -15,
-        }).save();
-
-        let scriptTask = task.create({
-            taskType: task.TaskType['MAP_REDUCE'],
-            scriptId: 'customscript_mr_mass_email_tn_v2',
-            deploymentId: 'customdeploy_mr_mass_email_tn_v2',
-            params: {
-                custscript_mr_mes_search_id: savedSearchId,
-                custscript_mr_mes_exec_timestamp: fileContent.timestamp,
-                custscript_mr_mes_param_file_id: fileId,
-                custscript_mr_mes_entity_type: savedSearchType
-            }
+        _writeResponseJson(response, {
+            employeeId: NS_MODULES.runtime['getCurrentUser']().id,
+            scriptId: process.env.VUE_APP_NS_PROCESSOR_SCRIPT_ID,
+            deploymentId: process.env.VUE_APP_NS_PROCESSOR_DEPLOY_ID,
+            taskType: VARS.TASK_TYPE.MAP_REDUCE,
+            taskParameters
         });
-        let scriptTaskId = scriptTask.submit();
-        let status = task.checkStatus(scriptTaskId).status;
-
-        _writeResponseJson(response, `Emails will be sent to all addresses present in the specified saved search. (Task status: ${status})`);
     },
+}
+
+const postOperations = {
+
 };
 
 
@@ -494,47 +426,6 @@ const sharedFunctions = {
         return _getArrayIntersection(fieldsToCheck, searchColumns);
     }
 };
-
-function _isSendingInProgress() {
-    let {search, file} = NS_MODULES;
-    let fileId = null;
-
-    search.create({
-        type: 'file',
-        filters: ['name', 'is', 'mp_sc_mass_email_params.json'],
-        columns: ['name', 'url']
-    }).run().each(resultSet => {fileId = resultSet.id;});
-
-    if (!fileId) return false;
-
-    let fileRecord = file.load({id: fileId});
-
-    try {
-        let fileContent = JSON.parse(fileRecord.getContents());
-
-        return ['INDEXING', 'SENDING'].includes(fileContent.status);
-    } catch (e) { return false; }
-}
-
-function _parseIsoDatetime(dateString) {
-    let dt = dateString.split(/[: T-]/).map(parseFloat);
-    return new Date(dt[0], dt[1] - 1, dt[2], dt[3] || 0, dt[4] || 0, dt[5] || 0, 0);
-}
-
-function _parseISODate(dateString) {
-    let dt = dateString.split(/[: T-]/).map(parseFloat);
-    return new Date(dt[0], dt[1] - 1, dt[2]);
-}
-
-function _getLocalTimeFromOffset(localUTCOffset) {
-    let today = new Date();
-    let serverUTCOffset = today.getTimezoneOffset();
-
-    let localTime = new Date();
-    localTime.setTime(today.getTime() + (serverUTCOffset - parseInt(localUTCOffset)) * 60 * 1000);
-
-    return localTime;
-}
 
 function _getArrayIntersection(a, b) {
     let setB = new Set(b);
