@@ -12,6 +12,7 @@ import {VARS} from '@/utils/utils.mjs';
 let htmlTemplateFile = 'mp_cl_mass_email_tn_v2_vue.html';
 const clientScriptFilename = 'mp_cl_mass_email_tn_v2_vue.js';
 const defaultTitle = 'Mass Email Sender';
+const processorScriptId = process.env.VUE_APP_NS_PROCESSOR_SCRIPT_ID; // The id of the record of this script in NetSuite
 
 let NS_MODULES = {};
 
@@ -360,6 +361,35 @@ const getOperations = {
             taskParameters
         });
     },
+    'getAllTasks' : function (response) {
+        let data = [];
+
+        NS_MODULES.search.create({
+            type: 'customrecord_scheduled_task',
+            filters: [
+                ['custrecord_script_id', 'is', processorScriptId],
+                'AND',
+                ['custrecord_task_initiator', 'is', NS_MODULES.runtime['getCurrentUser']().id],
+            ],
+            columns: [
+                'internalid', 'custrecord_task_status', 'custrecord_task_parameters', 'custrecord_scheduled_time',
+                NS_MODULES.search.createColumn({name: "lastmodified", sort: "DESC"}),
+            ]
+        }).run().each(result => {
+            let tmp = {};
+
+            for (let column of result.columns) {
+                let columnName = column.join ? `${column.join.toLowerCase()}.${column.name}` : column.name
+                tmp[columnName] = result.getValue(column);
+            }
+
+            data.push(tmp);
+
+            return true;
+        });
+
+        _writeResponseJson(response, data);
+    }
 }
 
 const postOperations = {

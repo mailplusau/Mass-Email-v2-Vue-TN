@@ -1,7 +1,6 @@
 import Vue from 'vue';
 import Vuex from 'vuex';
 import modules from './modules';
-import http from "@/utils/http";
 
 const baseURL = 'https://' + process.env.VUE_APP_NS_REALM + '.app.netsuite.com';
 
@@ -64,9 +63,8 @@ const actions = {
     init : async context => {
         if (!_checkNetSuiteEnv()) return;
 
-        await Promise.allSettled([
-            context.dispatch('email-sender/init'),
-        ])
+        await context.dispatch('email-sender/init');
+        await context.dispatch('email-history/init');
     },
     handleException: (context, {title, message}) => {
         context.commit('displayErrorGlobalModal', {
