@@ -25,7 +25,7 @@ const state = {
     },
 
     savedSearchPreview: {
-        open: true,
+        open: false,
         loading: false,
         lastPromise: null,
         data: [],
