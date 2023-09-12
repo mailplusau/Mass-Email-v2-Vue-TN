@@ -6,7 +6,10 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "postbuild": "node netsuite.upload.mjs",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "upload-suitelet": "node netsuite.upload.mjs SuiteScripts\\mp_sl_mass_email_tn_v2_vue.js resolve:env resolve:imports",
+    "upload-client": "node netsuite.upload.mjs SuiteScripts\\mp_cl_mass_email_tn_v2_vue.js resolve:env resolve:imports",
+    "upload-processor": "node netsuite.upload.mjs SuiteScripts\\mp_mr_mass_email_tn_v2.js resolve:env resolve:imports"
   },
   "netsuite": {
     "htmlFile": "mp_cl_mass_email_tn_v2_vue.html"
