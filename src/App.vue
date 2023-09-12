@@ -28,6 +28,14 @@
                     </v-icon>
                     History
                 </v-tab>
+                <v-spacer></v-spacer>
+
+                <v-tab :href="`#${mainTabNames.HELP}`">
+                    <v-icon left>
+                        mdi-help-circle-outline
+                    </v-icon>
+                    Help
+                </v-tab>
             </v-tabs>
 
             <v-divider></v-divider>
@@ -38,6 +46,9 @@
                 </v-tab-item>
                 <v-tab-item :value="mainTabNames.HISTORY">
                     <EmailHistory />
+                </v-tab-item>
+                <v-tab-item :value="mainTabNames.HELP">
+                    <HelpPage />
                 </v-tab-item>
             </v-tabs-items>
         </v-main>
@@ -61,6 +72,7 @@
 <script>
 import EmailHistory from "@/views/email-history/Main";
 import MassEmailSender from "@/views/mass-email/Main";
+import HelpPage from "@/views/help/Main";
 import GlobalNotificationModal from "@/components/GlobalNotificationModal";
 import {VARS} from "@/utils/utils";
 
@@ -74,6 +86,7 @@ export default {
         GlobalNotificationModal,
         EmailHistory,
         MassEmailSender,
+        HelpPage,
     },
     created() {
         this.$store.dispatch('init');

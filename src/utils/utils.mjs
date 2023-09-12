@@ -23,7 +23,8 @@ const TASK_TYPE = {
 
 let mainTabNames = {
     HOME: 'home',
-    HISTORY: 'history'
+    HISTORY: 'history',
+    HELP: 'help',
 };
 
 export const VARS = {
@@ -31,6 +32,9 @@ export const VARS = {
     TASK_TYPE,
 
     mainTabNames,
+
+    AUTHOR_NAME: process.env.VUE_APP_AUTHOR_NAME,
+    AUTHOR_EMAIL: process.env.VUE_APP_AUTHOR_EMAIL,
 };
 
 export function debounce(fn, wait){
