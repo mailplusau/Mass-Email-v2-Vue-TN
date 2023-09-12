@@ -103,3 +103,9 @@ export default {
     }
 };
 </script>
+
+<style>
+.cell-text-size {
+    font-size: 11px !important;
+}
+</style>

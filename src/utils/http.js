@@ -22,7 +22,7 @@ export default {
             superagent.get(baseUrl)
                 .set("Content-Type", "application/json")
                 .query({...essentialParams, requestData: JSON.stringify({operation, requestParams})})
-                .end((err, res) => { _handle(err, res, reject, resolve); });
+                .end((err, res) => { _handle(err, res, reject, resolve, options?.noErrorPopup); });
         });
     },
     async post(operation, requestParams, options) {
@@ -33,16 +33,18 @@ export default {
                 .set("Content-Type", "application/json")
                 .set("Accept", "json")
                 .send({operation, requestParams})
-                .end((err, res) => { _handle(err, res, reject, resolve); });
+                .end((err, res) => { _handle(err, res, reject, resolve, options?.noErrorPopup); });
         });
     }
 }
 
-function _handle(err, res, reject, resolve) {
+function _handle(err, res, reject, resolve, noErrorPopup = false) {
     let errorMessage = err || (res.body?.error || null);
 
     if (errorMessage) {
-        store.dispatch('handleException', {title: 'An error occurred', message: errorMessage}, {root: true}).then();
+        if (!noErrorPopup) store.dispatch('handleException',
+            {title: 'An error occurred', message: errorMessage}, {root: true}).then();
+
         reject(errorMessage);
     } else resolve(res.body);
 }

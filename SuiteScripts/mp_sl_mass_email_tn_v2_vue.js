@@ -361,6 +361,52 @@ const getOperations = {
             taskParameters
         });
     },
+    'getSavedSearchPreview' : function (response, {savedSearchId, savedSearchType}) {
+        let searchObj;
+        let {search} = NS_MODULES;
+
+        if (savedSearchType === 'Contact' || savedSearchType === 'Customer')
+            searchObj = search.load({id: savedSearchId});
+        else if (savedSearchType === 'Franchisee') {
+            searchObj = search.create({
+                type: 'customer',
+                filters: [
+                    ['partner', 'is', savedSearchId],
+                    'AND',
+                    ['isinactive', 'is', false],
+                    'AND',
+                    ['entitystatus', 'is', 13] // Only signed customer receive the emails
+                ],
+                columns: [
+                    search.createColumn({name: "internalid", label: "Internal ID"}),
+                    search.createColumn({name: "email", label: "Account (main) email"}),
+                    search.createColumn({name: "custentity_email_service", label: "Day-to-day email"}),
+                ]
+            })
+        }
+
+        if (searchObj) {
+            let data = [];
+            let tableHeaders = [];
+
+            let resultSet = searchObj.run()['getRange']({start: 0, end: 1000});
+
+            for (let result of resultSet) {
+                let tmp = {};
+
+                if (!tableHeaders.length)
+                    for (let column of result.columns)
+                        tableHeaders.push({ text: column.label, value: column.name });
+
+                for (let column of result.columns)
+                    tmp[column.name] = result.getValue(column);
+
+                data.push(tmp);
+            }
+
+            _writeResponseJson(response, {tableHeaders, data});
+        } else _writeResponseJson(response, {error: 'No saved search specified.'});
+    },
     'getAllTasks' : function (response) {
         let data = [];
 

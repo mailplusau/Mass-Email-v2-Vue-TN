@@ -24,6 +24,16 @@ const state = {
         loading: false,
     },
 
+    savedSearchPreview: {
+        open: true,
+        loading: false,
+        lastPromise: null,
+        data: [],
+        tableHeaders: [],
+        savedSearchId: null,
+        searchType: '',
+    },
+
     searchTypes: [
         {value: 'Customer', text: 'Customer', icon: 'mdi-account-star'},
         {value: 'Contact', text: 'Contact', icon: 'mdi-account-tie'},
@@ -37,6 +47,7 @@ const getters = {
     savedSearches : state => state.savedSearches,
     emailTemplates : state => state.emailTemplates,
     emailTemplatePreview : state => state.emailTemplatePreview,
+    savedSearchPreview : state => state.savedSearchPreview,
 };
 
 const mutations = {
@@ -146,7 +157,43 @@ const actions = {
             context.commit('displayInfoGlobalModal',
                 {title: 'Emails Scheduled', message: `Emails will be sent at the specified date and time. (${res})`}, {root: true});
         } catch (e) { console.error(e); }
-    }
+    },
+
+    openSavedSearchPreviewDialog : async context => {
+        context.state.savedSearchPreview.open = true;
+        if (context.state.savedSearchPreview.savedSearchId !== context.state.form.savedSearchId) {
+            context.state.savedSearchPreview.data.splice(0);
+            context.state.savedSearchPreview.searchType = context.state.form.searchType;
+            context.state.savedSearchPreview.savedSearchId = context.state.form.savedSearchId;
+
+            const promise = http.get('getSavedSearchPreview', {
+                savedSearchType: context.state.form.searchType,
+                savedSearchId: context.state.form.savedSearchId
+            }, {noErrorPopup: true});
+
+            context.state.savedSearchPreview.lastPromise = promise;
+
+            promise.then(({tableHeaders, data}) => {
+                if (promise === context.state.savedSearchPreview.lastPromise) {
+                    context.state.savedSearchPreview.data = data;
+                    context.state.savedSearchPreview.tableHeaders = tableHeaders.map(item => ({
+                        ...item,
+                        cellClass: 'cell-text-size',
+                        sortable: false
+                    }));
+                    context.state.savedSearchPreview.lastPromise = null;
+                }
+            }).catch( error => {
+                if (promise === context.state.savedSearchPreview.lastPromise)
+                    context.state.savedSearchPreview.lastPromise = null;
+
+                console.log(error);
+            });
+        }
+    },
+    closeSavedSearchPreviewDialog : async context => {
+        context.state.savedSearchPreview.open = false;
+    },
 };
 
 function _validateSavedSearchAndEmailTemplate(context) {

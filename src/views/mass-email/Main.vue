@@ -1,22 +1,22 @@
 <template>
     <v-container fluid>
-        <v-row>
-            <v-col cols="4">
+        <v-row no-gutters>
+            <v-col lg="2" md="3" sm="4" cols="12" class="px-2">
                 <v-autocomplete
                     v-model="form.searchType"
                     :items="$store.getters['email-sender/searchTypes']" item-text="text" item-value="value"
                     label="Search Type"
-                    outlined
+                    outlined dense
                     @change="$store.dispatch('email-sender/handleSearchTypeChanged')"
                 ></v-autocomplete>
             </v-col>
 
-            <v-col cols="8">
+            <v-col lg="8" md="7" sm="5" cols="7" class="px-2">
                 <v-autocomplete
                     v-model="form.savedSearchId"
                     :items="$store.getters['email-sender/savedSearches']" item-text="text" item-value="value"
                     :label="form.searchType || 'No Search Type Selected'"
-                    outlined persistent-hint
+                    outlined persistent-hint dense
                     :prepend-inner-icon="getIconForSearchType()"
                     append-outer-icon="mdi-refresh"
                     @click:append-outer="$store.dispatch('email-sender/handleSearchTypeChanged')"
@@ -27,12 +27,16 @@
                 ></v-autocomplete>
             </v-col>
 
-            <v-col cols="12">
+            <v-col lg="2" md="2" sm="3" cols="5" class="px-2">
+                <SavedSearchPreviewDialog />
+            </v-col>
+
+            <v-col cols="12" class="px-2">
                 <v-autocomplete
                     v-model="form.emailTemplateId"
                     :items="$store.getters['email-sender/emailTemplates']" item-text="name" item-value="custrecord_camp_comm_email_template"
                     :label="'Email Template'"
-                    outlined persistent-hint
+                    outlined persistent-hint dense
                     prepend-inner-icon="mdi-email"
                     append-outer-icon="mdi-refresh"
                     @click:append-outer="$store.dispatch('email-sender/getEmailTemplates')"
@@ -63,10 +67,11 @@
 import SendMassEmailDialog from '@/views/mass-email/SendMassEmailDialog';
 import ScheduleMassEmailDialog from '@/views/mass-email/ScheduleMassEmailDialog';
 import EmailTemplatePreview from '@/views/mass-email/EmailTemplatePreview';
+import SavedSearchPreviewDialog from '@/views/mass-email/SavedSearchPreviewDialog';
 
 export default {
     name: "Main",
-    components: {EmailTemplatePreview, ScheduleMassEmailDialog, SendMassEmailDialog},
+    components: {SavedSearchPreviewDialog, EmailTemplatePreview, ScheduleMassEmailDialog, SendMassEmailDialog},
     methods: {
         getIconForSearchType() {
             let index = this.$store.getters['email-sender/searchTypes'].findIndex(item => item.value === this.form.searchType);
