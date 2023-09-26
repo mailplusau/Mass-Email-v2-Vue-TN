@@ -96,19 +96,22 @@ function _handleSavedSearchType(savedSearchId, savedSearchType) {
 
 function _indexEmailAddresses(context) {
     let index = 0;
-    let searchResult = JSON.parse(context.values);
     let emailRegEx = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
-    let id = searchResult.values?.['customer.internalid'] ||
-        searchResult.values?.internalid?.value || searchResult.values['internalid'] || null;
 
-    if (!id) NS_MODULES.log.error({title: "Undefined ID", details: `${context.values}`});
-    else
-        for (let field in searchResult.values) { // check for any field that contains 'email' in its name and its value is a valid email adress
-            if (field.includes('email') && typeof searchResult.values[field] === 'string' && emailRegEx.test(searchResult.values[field]))
-                context.write({key: context.key + '|' + index, value: searchResult.values[field] + '/' + id});
+    for (let value of context.values) {
+        let searchResult = JSON.parse(value);
+        let id = searchResult.values?.['customer.internalid'] ||
+            searchResult.values?.internalid?.value || searchResult.values['internalid'] || null;
 
-            index++;
-        }
+        if (!id) NS_MODULES.log.error({title: "Undefined ID", details: `${context.values}`});
+        else
+            for (let field in searchResult.values) { // check for any field that contains 'email' in its name and its value is a valid email address
+                if (field.includes('email') && typeof searchResult.values[field] === 'string' && emailRegEx.test(searchResult.values[field]))
+                    context.write({key: context.key + '|' + index, value: searchResult.values[field].toLowerCase() + '/' + id});
+
+                index++;
+            }
+    }
 }
 
 function _sendEmails(context, taskRecord) {
@@ -118,9 +121,8 @@ function _sendEmails(context, taskRecord) {
         let index = 0;
 
         for (let value of context.values) {
-            let {authorId, customSubject, emailTemplateId} = taskParams;
-
             let [emailAddress, customerId] = value.split('/');
+            let {authorId, customSubject, emailTemplateId} = taskParams;
             let {emailSubject, emailBody} = _getEmailTemplate(emailTemplateId, customerId);
 
             NS_MODULES.email.send({
